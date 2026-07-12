@@ -102,7 +102,7 @@ The free aprs.fi API key has a limited request quota. Each report build makes
 - if it still can't complete, it exits without overwriting the page, so the
   **last good report stays up**.
 
-The schedule is deliberately light (~6 builds around the net, not continuous).
+The schedule is deliberately light (3 builds — 8:45, 9:00, 9:15 PM Central).
 If you hit rate limits often, either reduce the SSID set (`--ssids`) / build
 frequency, or **ask aprs.fi for a higher quota** (they grant increases for
 legitimate uses — contact the site operator from your account).

@@ -1,23 +1,27 @@
 name: Net report
 
-# Publishes the roster report to GitHub Pages.
-# Runs on demand ("Run workflow" button) and on a schedule around the net
-# (Sundays 9:00 PM Central). GitHub cron is UTC and has no DST; 01:05-03:35 UTC
-# Monday covers 9 PM both in CST (UTC-6) and CDT (UTC-5).
-# Kept to ~6 builds/night on purpose: each build makes ~25 aprs.fi requests and
-# the free API quota is limited, so we don't poll aggressively.
+# Publishes the roster report to GitHub Pages for the Sunday net.
+#
+# Target builds: Sun 8:45, 9:00, 9:15 PM Central. GitHub cron is UTC with no
+# DST, so we list BOTH the CDT (UTC-5) and CST (UTC-6) UTC times -- six firings
+# -- and a gate step lets only the three that fall in the Central-time net
+# window actually run (plus any manual "Run workflow"). Net effect: exactly
+# three builds a night, correct year-round, no seasonal edits.
 on:
   workflow_dispatch:
   schedule:
-    - cron: "5,35 1-3 * * 1"
+    - cron: "45 1 * * 1"   # 8:45 PM CDT (Sun) / 7:45 PM CST -> gated
+    - cron: "0 2 * * 1"    # 9:00 PM CDT      / 8:00 PM CST -> gated
+    - cron: "15 2 * * 1"   # 9:15 PM CDT      / 8:15 PM CST -> gated
+    - cron: "45 2 * * 1"   # 9:45 PM CDT      / 8:45 PM CST -> gated
+    - cron: "0 3 * * 1"    # 10:00 PM CDT     / 9:00 PM CST -> gated
+    - cron: "15 3 * * 1"   # 10:15 PM CDT     / 9:15 PM CST -> gated
 
-# Least-privilege token that can still deploy Pages.
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Never run two Pages deploys at once.
 concurrency:
   group: pages
   cancel-in-progress: true
@@ -29,31 +33,52 @@ jobs:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Gate to the net window (Sun 8:45-9:15 PM Central)
+        id: gate
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "manual run -> proceed"; echo "go=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          read dow hm < <(TZ=America/Chicago date +'%u %H%M')  # Sun=7
+          hm=$((10#$hm))
+          if [ "$dow" = "7" ] && [ "$hm" -ge 2040 ] && [ "$hm" -le 2120 ]; then
+            echo "in net window ($dow $hm) -> proceed"
+            echo "go=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "outside net window ($dow $hm) -> skip"
+            echo "go=false" >> "$GITHUB_OUTPUT"
+          fi
 
-      - uses: actions/setup-python@v5
+      - if: steps.gate.outputs.go == 'true'
+        uses: actions/checkout@v4
+
+      - if: steps.gate.outputs.go == 'true'
+        uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
       - name: Import current roster from the RARC sheet
-        # Pull the active membership (paid through the current year) straight
-        # from the club's published Google Sheet, so the roster stays in sync.
+        if: steps.gate.outputs.go == 'true'
         run: |
           python import_roster.py --paid-thru "$(date -u +%Y)" --wildcard \
             --out net-roster.txt
 
       - name: Generate report
+        if: steps.gate.outputs.go == 'true'
         env:
           APRSFI_API_KEY: ${{ secrets.APRSFI_API_KEY }}
         run: |
           mkdir -p _site
           python aprs_net_check.py --roster net-roster.txt --html _site/index.html
 
-      - uses: actions/configure-pages@v5
+      - if: steps.gate.outputs.go == 'true'
+        uses: actions/configure-pages@v5
 
-      - uses: actions/upload-pages-artifact@v3
+      - if: steps.gate.outputs.go == 'true'
+        uses: actions/upload-pages-artifact@v3
         with:
           path: _site
 
       - id: deploy
+        if: steps.gate.outputs.go == 'true'
         uses: actions/deploy-pages@v4
