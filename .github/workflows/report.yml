@@ -59,9 +59,8 @@ jobs:
 
       - name: Import current roster from the RARC sheet
         if: steps.gate.outputs.go == 'true'
-        run: |
-          python import_roster.py --paid-thru "$(date -u +%Y)" --wildcard \
-            --out net-roster.txt
+        # Roster source, wildcard, and paid-thru come from config.json.
+        run: python import_roster.py --out net-roster.txt
 
       - name: Generate report
         if: steps.gate.outputs.go == 'true'

@@ -17,20 +17,34 @@ but consider a lighter refresh schedule if you enable it for everyone.
 import argparse
 import csv
 import io
+import datetime
+import json
+import os
 import re
 import sys
 import urllib.error
 import urllib.request
 
+HERE = os.path.dirname(os.path.abspath(__file__))
 # "Publish to web" CSV export of the sheet embedded on the membership page.
+# (Overridable in config.json -> roster_sheet_csv.)
 SHEET_CSV = ("https://docs.google.com/spreadsheets/d/e/"
              "2PACX-1vS6rTXV8oJdJut9OSWFtrbMqS5LO7ojncxmrgaLF27EqzgM_"
              "NSrEfTZmbiBn6NL9tSdCkUj5LFkElQe/pub"
              "?gid=1526286142&single=true&output=csv")
-OUT_DEFAULT = "net-roster.txt"
+OUT_DEFAULT = os.path.join(HERE, "net-roster.txt")
 USER_AGENT = "aprs-net-check import/0.1"
 # Lenient US-style callsign check (1-2 letters, a digit, 1-4 letters).
 CALL_RE = re.compile(r"^[A-Z]{1,2}[0-9][A-Z]{1,4}$")
+
+
+def load_config():
+    """Read config.json next to the script; {} if absent/invalid."""
+    try:
+        with open(os.path.join(HERE, "config.json"), encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {}
 
 
 def fetch_csv(url):
@@ -65,23 +79,35 @@ def parse_members(text, paid_thru=None):
 
 
 def main():
+    cfg = load_config()                     # config.json defaults (CLI overrides)
     ap = argparse.ArgumentParser(description="Import RARC roster from the "
                                  "published Google Sheet into net-roster.txt.")
-    ap.add_argument("--url", default=SHEET_CSV, help="sheet CSV export URL")
+    ap.add_argument("--url", default=None, help="sheet CSV export URL "
+                    "(default: config roster_sheet_csv)")
     ap.add_argument("--out", default=OUT_DEFAULT)
-    ap.add_argument("--wildcard", action="store_true",
+    ap.add_argument("--wildcard", action="store_true", default=None,
                     help="append '*' to each call so any SSID matches "
-                         "(≈16x more aprs.fi lookups)")
+                         "(default: config 'wildcard')")
     ap.add_argument("--paid-thru", type=int, default=None, metavar="YEAR",
-                    help="only members paid through this year or later")
+                    help="only members paid through this year or later "
+                         "(default: config 'membership_paid_thru')")
     a = ap.parse_args()
 
+    # Resolve settings: CLI flag > config.json > built-in default.
+    url = a.url or cfg.get("roster_sheet_csv") or SHEET_CSV
+    wildcard = a.wildcard if a.wildcard is not None else cfg.get("wildcard", True)
+    paid_thru = a.paid_thru
+    if paid_thru is None:
+        cpt = cfg.get("membership_paid_thru", "current")
+        paid_thru = (datetime.date.today().year
+                     if str(cpt).strip().lower() == "current" else int(cpt))
+
     try:
-        text = fetch_csv(a.url)
+        text = fetch_csv(url)
     except (urllib.error.URLError, OSError) as e:
         sys.exit(f"could not fetch the sheet: {e}")
 
-    members = list(parse_members(text, a.paid_thru))
+    members = list(parse_members(text, paid_thru))
     if not members:
         sys.exit("no member callsigns parsed -- the sheet layout may have "
                  "changed; check the URL/columns.")
@@ -92,20 +118,20 @@ def main():
             uniq.append((c, n))
     members = sorted(uniq)
 
-    width = max(len(c) for c, _ in members) + (1 if a.wildcard else 0)
+    width = max(len(c) for c, _ in members) + (1 if wildcard else 0)
     lines = ["# Olmsted County net roster -- imported from the RARC membership",
              "# Google Sheet (rarchams.org). Regenerate with import_roster.py.",
              f"# {len(members)} members"
-             + (f", paid thru >= {a.paid_thru}" if a.paid_thru else "")
-             + (", wildcard SSIDs" if a.wildcard else "") + ".",
+             + (f", paid thru >= {paid_thru}" if paid_thru else "")
+             + (", wildcard SSIDs" if wildcard else "") + ".",
              ""]
     for call, name in members:
-        tag = (call + "*") if a.wildcard else call
+        tag = (call + "*") if wildcard else call
         lines.append(f"{tag:<{width + 1}} {name}".rstrip())
     with open(a.out, "w", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")
     print(f"wrote {a.out}: {len(members)} members"
-          + (" (wildcard)" if a.wildcard else ""))
+          + (" (wildcard)" if wildcard else ""))
 
 
 if __name__ == "__main__":

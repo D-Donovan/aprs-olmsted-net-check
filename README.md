@@ -72,6 +72,26 @@ Data: aprs.fi
 | `--apikey KEY` | — | aprs.fi API key (else env / file) |
 | `--all` | off | also show absent members and why |
 
+## Configuration (`config.json`)
+
+Routine settings live in `config.json` so you can maintain them without editing
+code. Both scripts read it; command-line flags still override.
+
+| Key | Meaning |
+|---|---|
+| `repeater_label` | Name shown on the page/report (e.g. `146.820`) |
+| `center_lat` / `center_lon` | Search center (the repeater), decimal degrees |
+| `radius_miles` | Search radius |
+| `window_hours` | "heard within" window |
+| `ssids` | SSIDs a `*` expands to (`0` = bare call) |
+| `membership_paid_thru` | `"current"` (this year) or a fixed year like `2026` |
+| `wildcard` | `true` = import members as `CALL*` (match any SSID) |
+| `roster_sheet_csv` | Published-Google-Sheet CSV URL to import members from |
+
+Edit `config.json`, commit, and the next build uses it. (The **schedule** is the
+one thing not in here — GitHub requires cron in the workflow file
+`.github/workflows/report.yml`.)
+
 ## Roster & auto-sync
 
 The report reads `net-roster.txt` (one callsign per line; text after it is the

@@ -52,6 +52,17 @@ USER_AGENT = "aprs-net-check/0.1 (+https://github.com/; APRS net helper)"
 MILES_TO_KM = 1.609344
 
 
+def load_config():
+    """Read config.json next to the script (maintenance knobs: center, radius,
+    window, ssids, sheet URL, ...). Returns {} if absent/invalid so built-in
+    defaults apply. CLI flags still override config."""
+    try:
+        with open(os.path.join(HERE, "config.json"), encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {}
+
+
 # ---- Helpers --------------------------------------------------------------
 def haversine_miles(lat1, lon1, lat2, lon2):
     r = 6371.0
@@ -168,15 +179,19 @@ def aprsfi_locations(calls, apikey):
 
 # ---- Main -----------------------------------------------------------------
 def main():
+    cfg = load_config()                     # config.json defaults (CLI overrides)
+    label = cfg.get("repeater_label", "146.820")
     ap = argparse.ArgumentParser(
-        description="List roster members heard near the 146.820 repeater.")
+        description=f"List roster members heard near the {label} repeater.")
     ap.add_argument("--roster", default=ROSTER_DEFAULT)
-    ap.add_argument("--hours", type=float, default=WINDOW_HOURS,
+    ap.add_argument("--hours", type=float,
+                    default=cfg.get("window_hours", WINDOW_HOURS),
                     help="heard-within window in hours (default 2)")
-    ap.add_argument("--radius", type=float, default=RADIUS_MILES,
+    ap.add_argument("--radius", type=float,
+                    default=cfg.get("radius_miles", RADIUS_MILES),
                     help="miles from the repeater (default 15)")
-    ap.add_argument("--lat", type=float, default=CENTER_LAT)
-    ap.add_argument("--lon", type=float, default=CENTER_LON)
+    ap.add_argument("--lat", type=float, default=cfg.get("center_lat", CENTER_LAT))
+    ap.add_argument("--lon", type=float, default=cfg.get("center_lon", CENTER_LON))
     ap.add_argument("--apikey", default=None)
     ap.add_argument("--all", dest="show_all", action="store_true",
                     help="also list roster members who are absent, with reason")
@@ -185,13 +200,19 @@ def main():
                          "instead of printing to the console")
     ap.add_argument("--ssids", default=None,
                     help="comma list of SSIDs a '*' expands to; use 0 for the "
-                         "bare call (default: 0,5,7,9,10)")
+                         "bare call (default from config: 0,5,7,9,10)")
     a = ap.parse_args()
 
-    ssids = None
+    # SSID set: --ssids overrides config "ssids" overrides WILDCARD_SSIDS.
+    def _parse_ssids(seq):
+        return [None if str(x).strip().lower() in ("0", "none", "") else int(x)
+                for x in seq]
     if a.ssids:
-        ssids = [None if x.strip().lower() in ("0", "none", "") else int(x)
-                 for x in a.ssids.split(",")]
+        ssids = _parse_ssids(a.ssids.split(","))
+    elif cfg.get("ssids") is not None:
+        ssids = _parse_ssids(cfg["ssids"])
+    else:
+        ssids = None
 
     roster = load_roster(a.roster)
     apikey = resolve_apikey(a.apikey)
@@ -248,10 +269,10 @@ def main():
 
     present.sort(key=lambda r: r[2])        # most recently heard first
     if a.html:
-        write_html_report(a.html, present, absent, roster, a)
+        write_html_report(a.html, present, absent, roster, a, label)
         print(f"wrote {a.html}: {len(present)} of {len(roster)} present")
         return
-    print(f"Roster members heard within {a.radius:g} mi of the 146.820 "
+    print(f"Roster members heard within {a.radius:g} mi of the {label} "
           f"repeater in the last {a.hours:g} h:\n")
     print(f"  {'CALLSIGN':<11} {'LAST':>6}  {'DIST':>7}  NAME")
     for call, name, age, dist, extra in present:
@@ -282,7 +303,7 @@ def _now_strings():
             "%Y-%m-%d %H:%M UTC")
 
 
-def write_html_report(path, present, absent, roster, a):
+def write_html_report(path, present, absent, roster, a, label="146.820"):
     """Write a self-contained static HTML report (for GitHub Pages). Auto-
     refreshes every 60 s so an open page picks up each scheduled rebuild."""
     import html as _h
@@ -334,7 +355,7 @@ def write_html_report(path, present, absent, roster, a):
 <div class="wrap">
   <h1>Olmsted County APRS Net &mdash; who's around</h1>
   <p class="sub">Roster members heard on APRS within {a.radius:g} mi of the
-     146.820 repeater in the last {a.hours:g} h.<br>
+     {label} repeater in the last {a.hours:g} h.<br>
      Generated {local_ts} &middot; auto-refreshes every 60 s.</p>
 
   <div class="count">{len(present)} of {len(roster)} present</div>

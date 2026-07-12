@@ -1,0 +1,11 @@
+{
+  "repeater_label": "146.820",
+  "center_lat": 44.02117,
+  "center_lon": -92.54167,
+  "radius_miles": 15,
+  "window_hours": 2,
+  "ssids": [0, 5, 7, 9, 10],
+  "membership_paid_thru": "current",
+  "wildcard": true,
+  "roster_sheet_csv": "https://docs.google.com/spreadsheets/d/e/2PACX-1vS6rTXV8oJdJut9OSWFtrbMqS5LO7ojncxmrgaLF27EqzgM_NSrEfTZmbiBn6NL9tSdCkUj5LFkElQe/pub?gid=1526286142&single=true&output=csv"
+}
