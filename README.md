@@ -72,6 +72,27 @@ Data: aprs.fi
 | `--apikey KEY` | — | aprs.fi API key (else env / file) |
 | `--all` | off | also show absent members and why |
 
+## Roster & auto-sync
+
+The report reads `net-roster.txt` (one callsign per line; text after it is the
+name). You can maintain it by hand, or import it from the club's membership
+list:
+
+```
+python import_roster.py --paid-thru 2026 --wildcard   # -> net-roster.txt
+```
+
+`import_roster.py` pulls the RARC membership Google Sheet (published to the web,
+so no login) and writes the active members. The **GitHub Action re-imports it on
+every run** with the current year, so the published page always reflects the
+club's current roster — no manual upkeep.
+
+**Wildcards / SSIDs:** a trailing `*` (e.g. `W0TMP*`) matches the member on any
+of their stations. The aprs.fi API has no wildcard search, so `*` is expanded to
+the bare call plus a set of SSIDs — default `0,5,7,9,10` (home, phone, HT,
+mobile, iGate). Change it with `--ssids`, e.g. `--ssids 0,7,9`. A member heard on
+any of those counts once; the report shows the most-recently-heard SSID.
+
 ## Privacy / notes
 
 - `roster.txt` and `apikey.txt` are **git-ignored** so your member list and key

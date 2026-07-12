@@ -86,16 +86,25 @@ def load_roster(path):
     return out
 
 
-def expand_ssids(token):
+# SSIDs a '*' wildcard expands to (None = the bare, no-SSID call). Chosen to
+# cover how a person is likely on the air near the net while keeping aprs.fi
+# lookups modest: bare (home), -5 (phone apps), -7 (HT/portable), -9 (mobile),
+# -10 (iGate/internet). Override per-run with --ssids.
+WILDCARD_SSIDS = [None, 5, 7, 9, 10]
+
+
+def expand_ssids(token, ssids=None):
     """Expand a roster token into the concrete callsigns to query. A trailing
-    '*' (e.g. 'W0TMP*' or 'W0TMP-*') becomes the bare call plus -1..-15, so it
-    matches W0TMP-5, W0TMP-7, etc. -- the aprs.fi API has no wildcard search, so
-    we enumerate the 15 possible SSIDs. Non-wildcard tokens are returned as-is."""
+    '*' (e.g. 'W0TMP*') becomes the bare call plus each SSID in `ssids`
+    (default WILDCARD_SSIDS), so 'W0TMP*' matches W0TMP-5, W0TMP-7, etc. The
+    aprs.fi API has no wildcard search, so we enumerate. Non-wildcard tokens
+    are returned unchanged."""
     t = token.upper()
-    if t.endswith("*"):
-        base = t[:-1].rstrip("-")
-        return [base] + [f"{base}-{i}" for i in range(1, 16)]
-    return [t]
+    if not t.endswith("*"):
+        return [t]
+    base = t[:-1].rstrip("-")
+    sset = WILDCARD_SSIDS if ssids is None else ssids
+    return [base if s is None else f"{base}-{s}" for s in sset]
 
 
 def resolve_apikey(cli_key):
@@ -157,7 +166,15 @@ def main():
     ap.add_argument("--html", default=None,
                     help="write an HTML report to this path (for GitHub Pages) "
                          "instead of printing to the console")
+    ap.add_argument("--ssids", default=None,
+                    help="comma list of SSIDs a '*' expands to; use 0 for the "
+                         "bare call (default: 0,5,7,9,10)")
     a = ap.parse_args()
+
+    ssids = None
+    if a.ssids:
+        ssids = [None if x.strip().lower() in ("0", "none", "") else int(x)
+                 for x in a.ssids.split(",")]
 
     roster = load_roster(a.roster)
     apikey = resolve_apikey(a.apikey)
@@ -167,7 +184,7 @@ def main():
     # since the aprs.fi API has no wildcard lookup of its own.
     entries, query = [], []             # entries: (display, name, [concrete])
     for token, name in roster:
-        concrete = expand_ssids(token)
+        concrete = expand_ssids(token, ssids)
         entries.append((token, name, concrete))
         query.extend(concrete)
     query = list(dict.fromkeys(query))  # dedupe, preserve order

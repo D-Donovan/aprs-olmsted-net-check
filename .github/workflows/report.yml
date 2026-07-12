@@ -33,6 +33,13 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Import current roster from the RARC sheet
+        # Pull the active membership (paid through the current year) straight
+        # from the club's published Google Sheet, so the roster stays in sync.
+        run: |
+          python import_roster.py --paid-thru "$(date -u +%Y)" --wildcard \
+            --out net-roster.txt
+
       - name: Generate report
         env:
           APRSFI_API_KEY: ${{ secrets.APRSFI_API_KEY }}

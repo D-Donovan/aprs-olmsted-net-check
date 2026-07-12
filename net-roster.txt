@@ -1,10 +1,102 @@
-# Olmsted County net roster used by the GitHub Pages report.
-# This file IS committed (unlike roster.txt), so the scheduled Action can read
-# it. One callsign per line; text after it is the name. Use the callsign-SSID
-# the member transmits APRS on (e.g. W0ABC-9). '#' starts a comment.
-#
-# A trailing '*' matches any SSID: "W0TMP*" catches W0TMP, W0TMP-5, W0TMP-7...
-# Replace the seed entries below with your actual net roster.
+# Olmsted County net roster -- imported from the RARC membership
+# Google Sheet (rarchams.org). Regenerate with import_roster.py.
+# 98 members, paid thru >= 2026, wildcard SSIDs.
 
-W0TMP*     (you)
-W0STV*     seen near the repeater
+AA0CN*   Collin Howe
+AA3ME*   Melissa Erickson
+AB0BW*   Robert Wiles
+AB0DE*   Steven Altchuler
+AC0ID*   Daryl Mowrer
+AC0W*    Bill Lippert
+AD0IS*   Robert Miller
+AG0T*    Jeremiah Oeltjen
+AI0M*    Stan Cram
+AK6GO*   Jamie Bennett
+K0AKM*   Dennis Noltee
+K0GEN*   Gene Turner
+K0GMK*   Mark Kelm
+K0JFJ*   Nick Alexakis
+K0MHC*   Jim Froemke
+K0MJI*   Matthew Iott
+K0RGR*   Wiliam F Osler
+K0RPD*   Dave Thomson
+K0SEC*   Sharon Cunningham
+K0UH*    Judy Regennitter
+K0VH*    Dave C Naatz
+K0WOZ*   Jim Evans
+K1ALT*   HANS YAEGGY
+K4IU*    Fred Regennitter
+K9XQ*    Mark Hansen
+KA0MYG*  John Dalin
+KA0RTB*  Cathlene Nordstrom
+KA0RTM*  Mike L Nordstrom
+KB0GT*   Robert N Meyer
+KB0QZN*  Joanne Alexakis
+KB0SZW*  PHIL SIMS
+KB0WDI*  Gena M Cahill
+KC0CJP*  Drew Naatz
+KC0DEY*  George Hagge
+KC0GND*  Robert Hart
+KC0PKU*  Darrel Rowe
+KC0PRG*  Nicole Jacobitz
+KC0TST*  Don Jungwirth
+KC0VMC*  Dan Lovik
+KC2D*    Chung Meng
+KD0AFF*  Joel Hansen
+KD0EBU*  Kristin Naatz
+KE0AOL*  Barbara Litsenberger
+KE0EMJ*  Kelly Boles
+KE0EML*  Michael Hughes
+KE0EXE*  Bob Andre
+KE0JJ*   Robert Zeller
+KE0KBL*  Steven Barber
+KE0PBI*  David Iott
+KE0SHQ*  Waldemar Gies
+KE0VTZ*  Jason Majorowicz
+KE0VUH*  James Anklan
+KE0WWG*  Patrick Hagge
+KF0AKV*  Michael Hamilton
+KF0LVU*  Wayne Weber
+KF0OKT*  Jeff Roepke
+KF0PGS*  Jared Pfaffenbach
+KF0RFK*  Chris Ring
+KF0RHE*  Eric Kuehn
+KF0S*    Eric J Van Norman
+KF0SNN*  VINCE TAPLIN
+KF0SOC*  Folke Arbin
+KF0SUV*  Scott Ferguson
+KF0TLA*  Benjamin Wilbur
+KF0TLD*  Jay Myers
+KF0VDO*  Richard Fritsche
+KF0VUA*  Matthew Payne
+KF0WIR*  Derek Rutten
+KF0YNA*  Jason LaPolice
+KF0YUC*  Jacob Fitzpatrick
+KJ2N*    Chuck DeWitz
+N0HBK*   Glenn Becklund
+N0HCK*   Steven Kuehn
+N0HZN*   John E Scott
+N0HZO*   Carol K Larson
+N0MGY*   Michael Robinson
+N0OZG*   James Sims
+N0SPN*   Danny Stroh
+N0UM*    George Hopkins
+N0UNC*   Jeff Hovel
+N0XQK*   Erik Barber
+NA0SA*   Boney Joseph
+W0AMB*   Richard Siglow
+W0BJS*   Bernard Saletel
+W0BM*    Pat Cahill
+W0DRH*   David Hall
+W0EJB*   Eric Bjornsen
+W0IVY*   Meredith Vandehaar
+W0LLN*   Peter C Wollan
+W0MN*    Gil D Baron
+W0SA*    Peter D Cross
+W0STV*   Steve Wiebke
+W0TMP*   David Donovan
+W0VLZ*   Niel Wiegand
+W0WWG*   Dave Nissen
+WB0RSJ*  Taylor Bauman
+WB0U*    Lynn Landin
+WU3L*    John Black
