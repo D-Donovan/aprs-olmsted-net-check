@@ -47,6 +47,7 @@ ROSTER_DEFAULT = os.path.join(HERE, "roster.txt")
 
 API_URL = "https://api.aprs.fi/api/get"
 API_BATCH = 20                       # aprs.fi allows up to 20 callsigns/query
+BATCH_DELAY = 6                      # seconds between requests (be gentle)
 USER_AGENT = "aprs-net-check/0.1 (+https://github.com/; APRS net helper)"
 MILES_TO_KM = 1.609344
 
@@ -124,28 +125,44 @@ def resolve_apikey(cli_key):
              "Get a free key at aprs.fi -> Account settings -> API key.")
 
 
-def aprsfi_locations(calls, apikey):
-    """Query aprs.fi for up to API_BATCH calls at once; return {CALL: entry}
-    merged across batches. Raises RuntimeError on an API-level failure."""
-    result = {}
-    for i in range(0, len(calls), API_BATCH):
-        batch = calls[i:i + API_BATCH]
-        params = urllib.parse.urlencode(
-            {"name": ",".join(batch), "what": "loc",
-             "apikey": apikey, "format": "json"})
-        req = urllib.request.Request(f"{API_URL}?{params}",
-                                     headers={"User-Agent": USER_AGENT})
-        with urllib.request.urlopen(req, timeout=15) as resp:
+def _aprsfi_batch(names, apikey, retries=3):
+    """One aprs.fi request for up to API_BATCH names -> list of entries.
+    Retries with exponential backoff when the API replies 'rate limited';
+    raises RuntimeError if it still fails (or on any other API-level error)."""
+    params = urllib.parse.urlencode(
+        {"name": ",".join(names), "what": "loc",
+         "apikey": apikey, "format": "json"})
+    req = urllib.request.Request(f"{API_URL}?{params}",
+                                 headers={"User-Agent": USER_AGENT})
+    delay = 15
+    for attempt in range(retries + 1):
+        with urllib.request.urlopen(req, timeout=20) as resp:
             data = json.loads(resp.read().decode("utf-8", errors="replace"))
-        if str(data.get("result")) != "ok":
-            raise RuntimeError(data.get("description")
-                               or f"aprs.fi returned: {data.get('result')}")
-        for e in data.get("entries", []):
+        if str(data.get("result")) == "ok":
+            return data.get("entries", [])
+        desc = (data.get("description") or "").lower()
+        if "rate" in desc and attempt < retries:
+            time.sleep(delay)               # transient throttle -> back off
+            delay *= 2
+            continue
+        raise RuntimeError(data.get("description")
+                           or f"aprs.fi returned: {data.get('result')}")
+    return []
+
+
+def aprsfi_locations(calls, apikey):
+    """Query aprs.fi in batches of API_BATCH -> {CALL: entry}. Spaces requests
+    (BATCH_DELAY) and backs off on rate limits. Raises RuntimeError if the API
+    can't be satisfied (the caller then leaves the previous report in place)."""
+    result = {}
+    batches = [calls[i:i + API_BATCH] for i in range(0, len(calls), API_BATCH)]
+    for n, batch in enumerate(batches):
+        for e in _aprsfi_batch(batch, apikey):
             name = (e.get("name") or "").upper()
             if name:
                 result[name] = e            # last entry per call wins
-        if i + API_BATCH < len(calls):
-            time.sleep(3)                   # be polite between batches
+        if n < len(batches) - 1:
+            time.sleep(BATCH_DELAY)         # be polite between batches
     return result
 
 

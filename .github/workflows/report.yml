@@ -2,12 +2,14 @@ name: Net report
 
 # Publishes the roster report to GitHub Pages.
 # Runs on demand ("Run workflow" button) and on a schedule around the net
-# (Sundays 9:00 PM Central). GitHub cron is UTC and has no DST, so the window
-# Monday 01:00-04:00 UTC covers 9 PM both in CST (UTC-6) and CDT (UTC-5).
+# (Sundays 9:00 PM Central). GitHub cron is UTC and has no DST; 01:05-03:35 UTC
+# Monday covers 9 PM both in CST (UTC-6) and CDT (UTC-5).
+# Kept to ~6 builds/night on purpose: each build makes ~25 aprs.fi requests and
+# the free API quota is limited, so we don't poll aggressively.
 on:
   workflow_dispatch:
   schedule:
-    - cron: "*/15 1-4 * * 1"
+    - cron: "5,35 1-3 * * 1"
 
 # Least-privilege token that can still deploy Pages.
 permissions:

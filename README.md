@@ -93,6 +93,20 @@ the bare call plus a set of SSIDs — default `0,5,7,9,10` (home, phone, HT,
 mobile, iGate). Change it with `--ssids`, e.g. `--ssids 0,7,9`. A member heard on
 any of those counts once; the report shows the most-recently-heard SSID.
 
+## aprs.fi API quota
+
+The free aprs.fi API key has a limited request quota. Each report build makes
+~25 requests (99 members × 5 SSIDs ÷ 20 per request), so the tool:
+
+- spaces requests and **backs off** if the API replies "query rate limited";
+- if it still can't complete, it exits without overwriting the page, so the
+  **last good report stays up**.
+
+The schedule is deliberately light (~6 builds around the net, not continuous).
+If you hit rate limits often, either reduce the SSID set (`--ssids`) / build
+frequency, or **ask aprs.fi for a higher quota** (they grant increases for
+legitimate uses — contact the site operator from your account).
+
 ## Privacy / notes
 
 - `roster.txt` and `apikey.txt` are **git-ignored** so your member list and key
