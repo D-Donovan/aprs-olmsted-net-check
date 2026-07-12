@@ -1,0 +1,9 @@
+# Olmsted County net roster used by the GitHub Pages report.
+# This file IS committed (unlike roster.txt), so the scheduled Action can read
+# it. One callsign per line; text after it is the name. Use the callsign-SSID
+# the member transmits APRS on (e.g. W0ABC-9). '#' starts a comment.
+#
+# Replace the seed entries below with your actual net roster.
+
+W0TMP      (you)
+W0STV-10

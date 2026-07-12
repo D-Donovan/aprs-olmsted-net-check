@@ -142,6 +142,9 @@ def main():
     ap.add_argument("--apikey", default=None)
     ap.add_argument("--all", dest="show_all", action="store_true",
                     help="also list roster members who are absent, with reason")
+    ap.add_argument("--html", default=None,
+                    help="write an HTML report to this path (for GitHub Pages) "
+                         "instead of printing to the console")
     a = ap.parse_args()
 
     roster = load_roster(a.roster)
@@ -182,6 +185,10 @@ def main():
             absent.append((call, name, ", ".join(why)))
 
     present.sort(key=lambda r: r[2])        # most recently heard first
+    if a.html:
+        write_html_report(a.html, present, absent, roster, a)
+        print(f"wrote {a.html}: {len(present)} of {len(roster)} present")
+        return
     print(f"Roster members heard within {a.radius:g} mi of the 146.820 "
           f"repeater in the last {a.hours:g} h:\n")
     print(f"  {'CALLSIGN':<11} {'LAST':>6}  {'DIST':>7}  NAME")
@@ -195,6 +202,102 @@ def main():
         for call, name, why in absent:
             print(f"  {call:<11} {why}" + (f"  ({name})" if name else ""))
     print("\nData: aprs.fi")
+
+
+def _now_strings():
+    """(local Central string, UTC string) for the 'generated' stamp. Falls back
+    to UTC-only if the zoneinfo database isn't available (e.g. bare Windows)."""
+    import datetime
+    utc = datetime.datetime.now(datetime.timezone.utc)
+    try:
+        from zoneinfo import ZoneInfo
+        ct = utc.astimezone(ZoneInfo("America/Chicago"))
+        return ct.strftime("%a %b %d %Y, %I:%M %p %Z"), utc.strftime(
+            "%Y-%m-%d %H:%M UTC")
+    except Exception:
+        return utc.strftime("%a %b %d %Y, %H:%M UTC"), utc.strftime(
+            "%Y-%m-%d %H:%M UTC")
+
+
+def write_html_report(path, present, absent, roster, a):
+    """Write a self-contained static HTML report (for GitHub Pages). Auto-
+    refreshes every 60 s so an open page picks up each scheduled rebuild."""
+    import html as _h
+    local_ts, utc_ts = _now_strings()
+    present_rows = "\n".join(
+        f"    <tr><td class='call'>{_h.escape(c)}</td>"
+        f"<td class='num'>{_fmt_age(age)}</td>"
+        f"<td class='num'>{dist:.1f} mi</td>"
+        f"<td>{_h.escape(n)}</td></tr>"
+        for c, n, age, dist in present) or (
+        "    <tr><td colspan='4' class='muted'>no roster members heard "
+        "in range</td></tr>")
+    absent_rows = "\n".join(
+        f"    <tr><td class='call'>{_h.escape(c)}</td>"
+        f"<td class='muted'>{_h.escape(w)}</td>"
+        f"<td>{_h.escape(n)}</td></tr>"
+        for c, n, w in absent)
+    doc = f"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="refresh" content="60">
+<title>Olmsted County APRS Net</title>
+<style>
+  :root {{ color-scheme: light dark; }}
+  body {{ font-family: system-ui, sans-serif; margin: 0; padding: 1.2rem;
+         line-height: 1.4; }}
+  .wrap {{ max-width: 720px; margin: 0 auto; }}
+  h1 {{ font-size: 1.3rem; margin: 0 0 .2rem; }}
+  .sub {{ color: #666; font-size: .9rem; margin: 0 0 1rem; }}
+  .count {{ font-size: 1.1rem; font-weight: 600; margin: 1rem 0 .5rem; }}
+  table {{ border-collapse: collapse; width: 100%; }}
+  th, td {{ text-align: left; padding: .4rem .6rem;
+           border-bottom: 1px solid #8883; }}
+  th {{ font-size: .8rem; text-transform: uppercase; letter-spacing: .03em;
+       color: #888; }}
+  .call {{ font-family: ui-monospace, monospace; font-weight: 600; }}
+  .num {{ font-variant-numeric: tabular-nums; white-space: nowrap; }}
+  .muted {{ color: #888; }}
+  details {{ margin-top: 1.2rem; }}
+  footer {{ margin-top: 1.5rem; color: #888; font-size: .8rem; }}
+  a {{ color: inherit; }}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Olmsted County APRS Net &mdash; who's around</h1>
+  <p class="sub">Roster members heard on APRS within {a.radius:g} mi of the
+     146.820 repeater in the last {a.hours:g} h.<br>
+     Generated {local_ts} &middot; auto-refreshes every 60 s.</p>
+
+  <div class="count">{len(present)} of {len(roster)} present</div>
+  <table>
+    <thead><tr><th>Call</th><th>Last heard</th><th>Distance</th>
+      <th>Name</th></tr></thead>
+    <tbody>
+{present_rows}
+    </tbody>
+  </table>
+
+  <details>
+    <summary>{len(absent)} not present / not nearby</summary>
+    <table>
+      <tbody>
+{absent_rows}
+      </tbody>
+    </table>
+  </details>
+
+  <footer>Data courtesy of <a href="https://aprs.fi/">aprs.fi</a>.
+    Net: Sundays 9:00 PM Central. Updated {utc_ts}.</footer>
+</div>
+</body>
+</html>
+"""
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(doc)
 
 
 def _fmt_age(seconds):

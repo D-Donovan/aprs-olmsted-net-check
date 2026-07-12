@@ -1,0 +1,50 @@
+name: Net report
+
+# Publishes the roster report to GitHub Pages.
+# Runs on demand ("Run workflow" button) and on a schedule around the net
+# (Sundays 9:00 PM Central). GitHub cron is UTC and has no DST, so the window
+# Monday 01:00-04:00 UTC covers 9 PM both in CST (UTC-6) and CDT (UTC-5).
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/15 1-4 * * 1"
+
+# Least-privilege token that can still deploy Pages.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never run two Pages deploys at once.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Generate report
+        env:
+          APRSFI_API_KEY: ${{ secrets.APRSFI_API_KEY }}
+        run: |
+          mkdir -p _site
+          python aprs_net_check.py --roster net-roster.txt --html _site/index.html
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - id: deploy
+        uses: actions/deploy-pages@v4
