@@ -86,6 +86,18 @@ def load_roster(path):
     return out
 
 
+def expand_ssids(token):
+    """Expand a roster token into the concrete callsigns to query. A trailing
+    '*' (e.g. 'W0TMP*' or 'W0TMP-*') becomes the bare call plus -1..-15, so it
+    matches W0TMP-5, W0TMP-7, etc. -- the aprs.fi API has no wildcard search, so
+    we enumerate the 15 possible SSIDs. Non-wildcard tokens are returned as-is."""
+    t = token.upper()
+    if t.endswith("*"):
+        base = t[:-1].rstrip("-")
+        return [base] + [f"{base}-{i}" for i in range(1, 16)]
+    return [t]
+
+
 def resolve_apikey(cli_key):
     if cli_key:
         return cli_key.strip()
@@ -149,40 +161,56 @@ def main():
 
     roster = load_roster(a.roster)
     apikey = resolve_apikey(a.apikey)
-    calls = [c for c, _ in roster]
-    names = dict(roster)
+
+    # Expand each roster entry into the concrete callsigns to query. A trailing
+    # '*' (W0TMP*) means "this base with any SSID": the bare call plus -1..-15,
+    # since the aprs.fi API has no wildcard lookup of its own.
+    entries, query = [], []             # entries: (display, name, [concrete])
+    for token, name in roster:
+        concrete = expand_ssids(token)
+        entries.append((token, name, concrete))
+        query.extend(concrete)
+    query = list(dict.fromkeys(query))  # dedupe, preserve order
 
     try:
-        found = aprsfi_locations(calls, apikey)
+        found = aprsfi_locations(query, apikey)
     except (urllib.error.URLError, RuntimeError, ValueError) as e:
         sys.exit(f"aprs.fi query failed: {e}")
 
     now = time.time()
     cutoff = a.hours * 3600
     present, absent = [], []
-    for call in calls:
-        e = found.get(call)
-        name = names.get(call, "")
-        if not e or "lasttime" not in e or "lat" not in e or "lng" not in e:
-            absent.append((call, name, "no APRS data"))
-            continue
-        try:
-            last = float(e["lasttime"])
-            lat, lon = float(e["lat"]), float(e["lng"])
-        except (TypeError, ValueError):
-            absent.append((call, name, "unparseable position"))
-            continue
-        age = now - last
-        dist = haversine_miles(a.lat, a.lon, lat, lon)
-        if age <= cutoff and dist <= a.radius:
-            present.append((call, name, age, dist))
-        else:
+    for display, name, concrete in entries:
+        hits, nearest = [], None        # nearest = best out-of-window near-miss
+        for c in concrete:
+            e = found.get(c)
+            if not e or "lasttime" not in e or "lat" not in e or "lng" not in e:
+                continue
+            try:
+                last = float(e["lasttime"])
+                lat, lon = float(e["lat"]), float(e["lng"])
+            except (TypeError, ValueError):
+                continue
+            age = now - last
+            dist = haversine_miles(a.lat, a.lon, lat, lon)
+            if age <= cutoff and dist <= a.radius:
+                hits.append((c, age, dist))
+            elif nearest is None or age < nearest[1]:
+                nearest = (c, age, dist)
+        if hits:
+            hits.sort(key=lambda h: h[1])           # most recent SSID first
+            c, age, dist = hits[0]
+            present.append((c, name, age, dist, len(hits) - 1))
+        elif nearest is not None:
+            c, age, dist = nearest
             why = []
             if age > cutoff:
                 why.append(f"last heard {_fmt_age(age)}")
             if dist > a.radius:
                 why.append(f"{dist:.1f} mi out")
-            absent.append((call, name, ", ".join(why)))
+            absent.append((display, name, ", ".join(why)))
+        else:
+            absent.append((display, name, "no APRS data"))
 
     present.sort(key=lambda r: r[2])        # most recently heard first
     if a.html:
@@ -192,8 +220,9 @@ def main():
     print(f"Roster members heard within {a.radius:g} mi of the 146.820 "
           f"repeater in the last {a.hours:g} h:\n")
     print(f"  {'CALLSIGN':<11} {'LAST':>6}  {'DIST':>7}  NAME")
-    for call, name, age, dist in present:
-        print(f"  {call:<11} {_fmt_age(age):>6}  {dist:5.1f} mi  {name}")
+    for call, name, age, dist, extra in present:
+        tag = f"  (+{extra} SSID)" if extra else ""
+        print(f"  {call:<11} {_fmt_age(age):>6}  {dist:5.1f} mi  {name}{tag}")
     if not present:
         print("  (none)")
     print(f"\n{len(present)} of {len(roster)} roster members present.")
@@ -228,8 +257,10 @@ def write_html_report(path, present, absent, roster, a):
         f"    <tr><td class='call'>{_h.escape(c)}</td>"
         f"<td class='num'>{_fmt_age(age)}</td>"
         f"<td class='num'>{dist:.1f} mi</td>"
-        f"<td>{_h.escape(n)}</td></tr>"
-        for c, n, age, dist in present) or (
+        f"<td>{_h.escape(n)}"
+        f"{(' <span class=muted>(+%d SSID)</span>' % extra) if extra else ''}"
+        f"</td></tr>"
+        for c, n, age, dist, extra in present) or (
         "    <tr><td colspan='4' class='muted'>no roster members heard "
         "in range</td></tr>")
     absent_rows = "\n".join(

@@ -3,7 +3,8 @@
 # it. One callsign per line; text after it is the name. Use the callsign-SSID
 # the member transmits APRS on (e.g. W0ABC-9). '#' starts a comment.
 #
+# A trailing '*' matches any SSID: "W0TMP*" catches W0TMP, W0TMP-5, W0TMP-7...
 # Replace the seed entries below with your actual net roster.
 
-W0TMP      (you)
-W0STV-10
+W0TMP*     (you)
+W0STV*     seen near the repeater
