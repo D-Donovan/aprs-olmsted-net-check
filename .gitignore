@@ -1,0 +1,9 @@
+# Secrets and personal data -- never commit these
+apikey.txt
+roster.txt
+
+# Local artifacts
+heard.sqlite3
+*.sqlite3
+__pycache__/
+*.pyc

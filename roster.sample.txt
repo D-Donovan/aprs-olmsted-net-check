@@ -1,0 +1,15 @@
+# RARC net roster -- sample. Copy this to roster.txt and edit.
+#
+# One member per line. The first token is the callsign; anything after it
+# (comma or spaces) is the person's name (optional).
+#
+# IMPORTANT: use the callsign-SSID the member actually transmits APRS on.
+# Many operators beacon from a mobile as e.g. -9 or -7, not their bare call.
+# If someone doesn't show up, check whether they use an SSID (W0ABC-9).
+#
+# '#' starts a comment; blank lines are ignored.
+
+W0ABC-9   Jane Doe
+KC0XYZ    John Smith
+N0AA,     Alex Example
+AB0CD
