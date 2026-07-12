@@ -7,6 +7,11 @@ the last 2 hours) **and are within a radius** (default: 15 miles) of the
 
 It uses the official [aprs.fi](https://aprs.fi/) API. Data courtesy of aprs.fi.
 
+📄 **Member guide (PDF):**
+[docs/APRS-Olmsted-Net-Check-Guide.pdf](docs/APRS-Olmsted-Net-Check-Guide.pdf) —
+a one-page‑ish handout for the club (how to use it + the tech stack). Regenerate
+it with `py build_guide.py`.
+
 ## Why a roster?
 
 The aprs.fi API looks up **specific callsigns you name** and returns each one's
