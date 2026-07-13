@@ -118,6 +118,20 @@ the bare call plus a set of SSIDs — default `0,5,7,9,10` (home, phone, HT,
 mobile, iGate). Change it with `--ssids`, e.g. `--ssids 0,7,9`. A member heard on
 any of those counts once; the report shows the most-recently-heard SSID.
 
+## Reliable scheduling (Windows Task)
+
+GitHub's built-in cron (`schedule:` in the workflow) is best-effort and can be
+delayed hours or dropped, so it's not dependable for on-time net builds. For
+reliable timing, a **Windows Scheduled Task** runs `trigger_net_report.ps1` at
+8:47 / 9:03 / 9:17 PM every Sunday. That script POSTs a `workflow_dispatch` to
+GitHub (explicit `ref=main`, with retry/backoff), which builds immediately and
+bypasses the time-gate. It uses the existing `gh` login — no token in the file.
+
+Registered once with PowerShell (`Register-ScheduledTask`, task name
+"APRS Olmsted Net Report", three Sunday triggers, runs when the user is logged
+on). The GitHub `schedule:` entries remain as a backup. Manual **Run workflow**
+is always available too.
+
 ## aprs.fi API quota
 
 The free aprs.fi API key has a limited request quota. Each report build makes
