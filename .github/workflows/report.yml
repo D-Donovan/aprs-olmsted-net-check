@@ -2,20 +2,23 @@ name: Net report
 
 # Publishes the roster report to GitHub Pages for the Sunday net.
 #
-# Target builds: Sun 8:45, 9:00, 9:15 PM Central. GitHub cron is UTC with no
-# DST, so we list BOTH the CDT (UTC-5) and CST (UTC-6) UTC times -- six firings
-# -- and a gate step lets only the three that fall in the Central-time net
-# window actually run (plus any manual "Run workflow"). Net effect: exactly
-# three builds a night, correct year-round, no seasonal edits.
+# Target builds: Sun 8:47, 9:03, 9:17 PM Central. Odd minutes (off :00/:15/:30/
+# :45) dodge GitHub's most congested cron slots, which are delayed/dropped most.
+# GitHub cron is UTC with no DST, so we list BOTH the CDT (UTC-5) and CST
+# (UTC-6) UTC times -- six firings -- and a gate step lets only the three that
+# fall in the Central-time net window actually run (plus any manual "Run
+# workflow"). Net effect: three builds a night, correct year-round.
+# NOTE: GitHub schedules are best-effort (often late, sometimes skipped),
+# especially right after a schedule change. Use "Run workflow" for on-time needs.
 on:
   workflow_dispatch:
   schedule:
-    - cron: "45 1 * * 1"   # 8:45 PM CDT (Sun) / 7:45 PM CST -> gated
-    - cron: "0 2 * * 1"    # 9:00 PM CDT      / 8:00 PM CST -> gated
-    - cron: "15 2 * * 1"   # 9:15 PM CDT      / 8:15 PM CST -> gated
-    - cron: "45 2 * * 1"   # 9:45 PM CDT      / 8:45 PM CST -> gated
-    - cron: "0 3 * * 1"    # 10:00 PM CDT     / 9:00 PM CST -> gated
-    - cron: "15 3 * * 1"   # 10:15 PM CDT     / 9:15 PM CST -> gated
+    - cron: "47 1 * * 1"   # 8:47 PM CDT (Sun) / 7:47 PM CST -> gated
+    - cron: "3 2 * * 1"    # 9:03 PM CDT       / 8:03 PM CST -> gated
+    - cron: "17 2 * * 1"   # 9:17 PM CDT       / 8:17 PM CST -> gated
+    - cron: "47 2 * * 1"   # 9:47 PM CDT       / 8:47 PM CST -> gated
+    - cron: "3 3 * * 1"    # 10:03 PM CDT      / 9:03 PM CST -> gated
+    - cron: "17 3 * * 1"   # 10:17 PM CDT      / 9:17 PM CST -> gated
 
 permissions:
   contents: read
