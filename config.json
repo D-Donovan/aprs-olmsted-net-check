@@ -2,7 +2,7 @@
   "repeater_label": "146.820",
   "center_lat": 44.02117,
   "center_lon": -92.54167,
-  "radius_miles": 15,
+  "radius_miles": 25,
   "window_hours": 2,
   "ssids": [0, 5, 7, 9, 10],
   "membership_paid_thru": "current",
